@@ -1,7 +1,7 @@
 apiVersion: skaffold/v4beta2
 kind: Config
 metadata:
-  name: ticketing
+  name: tickets
 build:
   local: 
     push: false

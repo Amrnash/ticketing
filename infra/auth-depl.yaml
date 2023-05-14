@@ -23,9 +23,9 @@ metadata:
 spec:
   selector:
     app: auth
+  type: NodePort
   ports:
-    - name: http
+    - name: auth
       protocol: TCP
-      port: 80
-      targetPort: 80
-  type: ClusterIP
+      port: 3000
+      targetPort: 3000
