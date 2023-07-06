@@ -1,6 +1,9 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { body, validationResult } from "express-validator";
-import { requestValidationError } from "../errors/request-validation-error";
+import { RequestValidationError } from "../errors/request-validation-error";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 const router = express.Router();
 
 router.post(
@@ -12,13 +15,15 @@ router.post(
       .isLength({ min: 4, max: 20 })
       .withMessage("Password must be between 4 and 20 characters"),
   ],
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      throw new requestValidationError(errors.array());
+      next(new RequestValidationError(errors.array()));
     }
-    // const { email, password } = req.body;
-    return res.send({ message: "created" });
+    const { email, name, password } = req.body;
+    const user = await prisma.user.create({ data: { name, email, password } });
+
+    return res.status(201).send({ message: "created", user });
   }
 );
 
