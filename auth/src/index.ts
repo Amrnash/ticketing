@@ -14,7 +14,7 @@ app.use(signinRouter);
 app.use(signupRouter);
 app.use(signoutRouter);
 app.all("*", () => {
-  throw new NotFoundError();
+  throw new NotFoundError("");
 });
 app.use(errorHandler);
 
