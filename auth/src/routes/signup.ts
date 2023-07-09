@@ -12,6 +12,7 @@ const router = express.Router();
 router.post(
   "/api/users/signup",
   [
+    body("name").isEmail().withMessage("Name must be valid"),
     body("email").isEmail().withMessage("Email must be valid"),
     body("password")
       .trim()
@@ -19,25 +20,29 @@ router.post(
       .withMessage("Password must be between 4 and 20 characters"),
   ],
   async (req: Request, res: Response, next: NextFunction) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      next(new RequestValidationError(errors.array()));
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        next(new RequestValidationError(errors.array()));
+      }
+      const { email, name, password } = req.body;
+      const exisitingUser = await prisma.user.findFirst({ where: { email } });
+      if (exisitingUser) next(new BadRequestError("Email already exists"));
+      // hash password
+      const salt = genSaltSync(10);
+      const hashedPassword = await hash(password, salt);
+      // create user
+      const user = await prisma.user.create({
+        data: { name, email, password: hashedPassword },
+        select: { id: true, email: true },
+      });
+      // generate token
+      const token = jwt.sign(user, process.env.JWT_SECRET!);
+      if (req.session) req.session.jwt = token;
+      return res.status(201).send({ message: "created", user });
+    } catch (error) {
+      next(error);
     }
-    const { email, name, password } = req.body;
-    const exisitingUser = await prisma.user.findFirst({ distinct: email });
-    if (exisitingUser) next(new BadRequestError("Email already exists"));
-    // hash password
-    const salt = genSaltSync(10);
-    const hashedPassword = await hash(password, salt);
-    // create user
-    const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword },
-      select: { id: true, email: true },
-    });
-    // generate token
-    const token = jwt.sign(user, process.env.JWT_SECRET!);
-    if (req.session) req.session.jwt = token;
-    return res.status(201).send({ message: "created", user });
   }
 );
 
