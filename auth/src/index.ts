@@ -5,9 +5,16 @@ import { signupRouter } from "./routes/signup";
 import { signoutRouter } from "./routes/signout";
 import { errorHandler } from "./middlewares/error-handler";
 import { NotFoundError } from "./errors/not-found-error";
+import cookieSession from "cookie-session";
 
 const app = express();
-
+app.use(
+  cookieSession({
+    secure: false,
+    signed: false,
+  })
+);
+if (!process.env.JWT_SECRET) console.error("JWT_SECRET is not provided");
 app.use(express.json());
 app.use(currentUserRouter);
 app.use(signinRouter);

@@ -4,6 +4,7 @@ import { RequestValidationError } from "../errors/request-validation-error";
 import { PrismaClient } from "@prisma/client";
 import { genSaltSync, hash } from "bcryptjs";
 import { BadRequestError } from "../errors/bad-request-error";
+import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -25,11 +26,17 @@ router.post(
     const { email, name, password } = req.body;
     const exisitingUser = await prisma.user.findFirst({ distinct: email });
     if (exisitingUser) next(new BadRequestError("Email already exists"));
+    // hash password
     const salt = genSaltSync(10);
     const hashedPassword = await hash(password, salt);
+    // create user
     const user = await prisma.user.create({
       data: { name, email, password: hashedPassword },
+      select: { id: true, email: true },
     });
+    // generate token
+    const token = jwt.sign(user, process.env.JWT_SECRET!);
+    if (req.session) req.session.jwt = token;
     return res.status(201).send({ message: "created", user });
   }
 );
