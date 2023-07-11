@@ -4,6 +4,7 @@ import { RequestValidationError } from "../errors/request-validation-error";
 import { PrismaClient } from "@prisma/client";
 import { genSaltSync, hash } from "bcryptjs";
 import { BadRequestError } from "../errors/bad-request-error";
+import { validateRequest } from "../middlewares/validate-request";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
@@ -12,12 +13,13 @@ const router = express.Router();
 router.post(
   "/api/users/signup",
   [
-    body("name").isEmail().withMessage("Name must be valid"),
+    body("name").isString().withMessage("Name must be valid"),
     body("email").isEmail().withMessage("Email must be valid"),
     body("password")
       .trim()
       .isLength({ min: 4, max: 20 })
       .withMessage("Password must be between 4 and 20 characters"),
+    validateRequest,
   ],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -38,7 +40,9 @@ router.post(
       });
       // generate token
       const token = jwt.sign(user, process.env.JWT_SECRET!);
-      if (req.session) req.session.jwt = token;
+      req.session = {
+        jwt: token,
+      };
       return res.status(201).send({ message: "created", user });
     } catch (error) {
       next(error);
